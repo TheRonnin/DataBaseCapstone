@@ -187,6 +187,71 @@ DELIMITER ;
 -- Call the AddValidBookings procedure
 CALL AddValidBookings('2023-11-09', 1);
 
+DELIMITER //
+
+CREATE PROCEDURE ManageBooking(
+    IN pChoice INT,
+    IN pBookingID VARCHAR(45),
+    IN pBookingDate DATE,
+    IN pTableNo INT,
+    IN pCustomerID VARCHAR(45)
+)
+BEGIN
+    DECLARE duplicateEntry INT DEFAULT 0;
+
+    -- Begin a transaction
+    START TRANSACTION;
+
+    -- Process user's choice
+    CASE pChoice
+        WHEN 1 THEN
+            -- Add new booking
+            BEGIN
+                -- Declare handler for SQLException
+                DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+                    SET duplicateEntry = 1;
+
+                INSERT INTO Bookings (BookingID, BookingDate, TableNo, CustomerID)
+                VALUES (pBookingID, pBookingDate, pTableNo, pCustomerID);
+
+                -- Check for duplicate entry
+                IF duplicateEntry = 0 THEN
+                    SELECT 'New booking added successfully.' AS Result;
+                ELSE
+                    SELECT 'Error: Duplicate entry found. Booking not added.' AS Result;
+                END IF;
+            END;
+
+        WHEN 2 THEN
+            -- Update existing booking
+            UPDATE Bookings
+            SET BookingDate = pBookingDate, TableNo = pTableNo, CustomerID = pCustomerID
+            WHERE BookingID = pBookingID;
+            SELECT 'Booking updated successfully.' AS Result;
+
+        WHEN 3 THEN
+            -- Cancel booking
+            DELETE FROM Bookings WHERE BookingID = pBookingID;
+            SELECT 'Booking canceled successfully.' AS Result;
+
+        WHEN 4 THEN
+            -- Exit the procedure
+            SELECT 'Exiting the procedure.' AS Result;
+    END CASE;
+
+    -- Commit the transaction if everything is successful
+    COMMIT;
+
+    -- Rollback the transaction if there was an error
+    ROLLBACK;
+END //
+
+DELIMITER ;
+
+
+CALL ManageBooking(1, 'B001', '2023-11-09', 1, 'Cust001');
+
+
 
 
 
