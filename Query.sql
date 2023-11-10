@@ -129,3 +129,65 @@ DELIMITER ;
 
 CALL CancelOrder('Order002');
 SELECT * FROM Orders;
+
+DELIMITER //
+SET @bookingCount = 0;
+CREATE PROCEDURE CheckBooking(IN checkBookingDate DATE, IN checkTableNo INT)
+BEGIN
+    -- Count the number of bookings for the specified date and table number
+    SELECT COUNT(*) INTO @bookingCount
+    FROM Bookings
+    WHERE BookingDate = checkBookingDate AND TableNo = checkTableNo;
+
+    -- If there are bookings, print a message, otherwise, indicate the table is available
+    IF @bookingCount > 0 THEN
+        SELECT CONCAT('Table ', checkTableNo, ' is already booked on ', checkBookingDate) AS Result;
+    ELSE
+        SELECT CONCAT('Table ', checkTableNo, ' is available on ', checkBookingDate) AS Result;
+    END IF;
+END //
+DELIMITER ;
+
+CALL CheckBooking('2023-11-09', 1);
+
+DELIMITER //
+
+CREATE PROCEDURE AddValidBookings(IN pBookingDate DATE, IN pTableNo INT)
+BEGIN
+    DECLARE bookingExists INT;
+
+    -- Check if the table is already booked for the given date
+    SELECT COUNT(*) INTO bookingExists
+    FROM Bookings
+    WHERE BookingDate = pBookingDate AND TableNo = pTableNo;
+
+    -- Begin a transaction
+    START TRANSACTION;
+
+    -- If the table is not already booked, insert the new booking with a generated customer ID
+    IF bookingExists = 0 THEN
+        -- Generate a unique customer ID using CONCAT and UUID
+        SET @newCustomerID = CONCAT('Cust', REPLACE(UUID(), '-', ''));
+
+        INSERT INTO Bookings (BookingDate, TableNo, CustomerID)
+        VALUES (pBookingDate, pTableNo, @newCustomerID);
+
+        -- Commit the transaction if everything is successful
+        COMMIT;
+        SELECT CONCAT('Booking added successfully. Assigned CustomerID: ', @newCustomerID) AS Result;
+    ELSE
+        -- Rollback the transaction if the table is already booked
+        ROLLBACK;
+        SELECT 'Table is already booked for the given date.' AS Result;
+    END IF;
+END //
+
+DELIMITER ;
+
+-- Call the AddValidBookings procedure
+CALL AddValidBookings('2023-11-09', 1);
+
+
+
+
+
