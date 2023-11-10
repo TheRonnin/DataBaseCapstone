@@ -113,3 +113,19 @@ HAVING
 SELECT * FROM CustomerOrdersView;
 
 SELECT * FROM PopularMenuItems;
+
+CREATE PROCEDURE MaxOrder()
+SELECT max(Quantity) FROM Orders;
+CALL MaxOrder();
+
+PREPARE GetOrderDetails FROM 'SELECT OrderID, Quantity, TotalCost FROM Orders WHERE BookingID=?';
+SET @customerid='B001';
+EXECUTE GetOrderDetails USING @customerid;
+
+DELIMITER //
+CREATE PROCEDURE CancelOrder(IN ID varchar(45) )
+DELETE FROM Orders WHERE OrderID=ID;
+DELIMITER ;
+
+CALL CancelOrder('Order002');
+SELECT * FROM Orders;
